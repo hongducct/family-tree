@@ -1,42 +1,129 @@
-import { FamilyMember, User, PendingChange } from '../types/family';
+import { FamilyMember, User, PendingChange, Family, FamilyMembership, FamilyInvitation } from '../types/family';
 
+// Families data
+export const mockFamilies: Family[] = [
+  {
+    id: 'family1',
+    name: 'Gia đình Nguyễn Văn Tổ',
+    description: 'Dòng họ Nguyễn tại Hà Nội',
+    createdBy: 'user1',
+    createdAt: '2024-01-01T00:00:00Z',
+    isPublic: false,
+    settings: {
+      allowPublicView: false,
+      allowMemberInvite: true,
+      requireApproval: true
+    }
+  },
+  {
+    id: 'family2', 
+    name: 'Gia đình Trần Văn Minh',
+    description: 'Dòng họ Trần tại TP.HCM',
+    createdBy: 'user5',
+    createdAt: '2024-01-15T00:00:00Z',
+    isPublic: true,
+    publicUrl: 'tran-van-minh-family',
+    settings: {
+      allowPublicView: true,
+      allowMemberInvite: false,
+      requireApproval: true
+    }
+  }
+];
+
+// Updated Users data
 export const mockUsers: User[] = [
   {
     id: 'user1',
     email: 'admin@example.com',
     password: '123456',
-    familyMemberId: 'member7',
-    role: 'admin',
-    name: 'Nguyễn Văn An (Admin)'
+    name: 'Nguyễn Văn An',
+    systemRole: 'user',
+    createdAt: '2024-01-01T00:00:00Z',
+    familyMemberships: [
+      {
+        familyId: 'family1',
+        familyMemberId: 'member7',
+        role: 'admin',
+        joinedAt: '2024-01-01T00:00:00Z'
+      }
+    ],
+    currentFamilyId: 'family1'
   },
   {
     id: 'user2',
     email: 'editor@example.com',
     password: '123456',
-    familyMemberId: 'member8',
-    role: 'editor',
-    name: 'Nguyễn Thị Hương (Editor)'
+    name: 'Nguyễn Thị Hương',
+    systemRole: 'user',
+    createdAt: '2024-01-02T00:00:00Z',
+    familyMemberships: [
+      {
+        familyId: 'family1',
+        familyMemberId: 'member8',
+        role: 'editor',
+        joinedAt: '2024-01-02T00:00:00Z'
+      }
+    ],
+    currentFamilyId: 'family1'
   },
   {
     id: 'user3',
     email: 'member@example.com',
     password: '123456',
-    familyMemberId: 'member13',
-    role: 'member',
-    name: 'Nguyễn Minh Đức (Member)'
+    name: 'Nguyễn Minh Đức',
+    systemRole: 'user',
+    createdAt: '2024-01-03T00:00:00Z',
+    familyMemberships: [
+      {
+        familyId: 'family1',
+        familyMemberId: 'member13',
+        role: 'member',
+        joinedAt: '2024-01-03T00:00:00Z'
+      }
+    ],
+    currentFamilyId: 'family1'
   },
   {
     id: 'user4',
     email: 'viewer@example.com',
     password: '123456',
-    familyMemberId: 'member14',
-    role: 'viewer',
-    name: 'Nguyễn Thu Hà (Viewer)'
+    name: 'Nguyễn Thu Hà',
+    systemRole: 'user',
+    createdAt: '2024-01-04T00:00:00Z',
+    familyMemberships: [
+      {
+        familyId: 'family1',
+        familyMemberId: 'member14',
+        role: 'viewer',
+        joinedAt: '2024-01-04T00:00:00Z'
+      }
+    ],
+    currentFamilyId: 'family1'
+  },
+  {
+    id: 'user5',
+    email: 'tran.minh@example.com',
+    password: '123456',
+    name: 'Trần Văn Minh',
+    systemRole: 'user',
+    createdAt: '2024-01-15T00:00:00Z',
+    familyMemberships: [
+      {
+        familyId: 'family2',
+        familyMemberId: 'member_tran1',
+        role: 'admin',
+        joinedAt: '2024-01-15T00:00:00Z'
+      }
+    ],
+    currentFamilyId: 'family2'
   }
 ];
 
 export let pendingChanges: PendingChange[] = [];
+export let familyInvitations: FamilyInvitation[] = [];
 
+// Updated Family Members - Family 1 (Nguyễn)
 export const mockFamilyMembers: FamilyMember[] = [
   // Thế hệ 1 - Ông bà cố
   {
@@ -50,8 +137,9 @@ export const mockFamilyMembers: FamilyMember[] = [
     description: 'Người sáng lập dòng họ Nguyễn tại làng',
     characteristics: ['Hiền lành', 'Chăm chỉ', 'Có uy tín'],
     generation: 1,
-    spouseIds: ['member2', 'member2b'], // Có 2 vợ
-    childrenIds: ['member3', 'member4']
+    spouseIds: ['member2', 'member2b'],
+    childrenIds: ['member3', 'member4'],
+    familyId: 'family1'
   },
   {
     id: 'member2',
@@ -65,7 +153,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Tốt bụng', 'Chăm sóc gia đình'],
     generation: 1,
     spouseIds: ['member1'],
-    childrenIds: ['member3']
+    childrenIds: ['member3'],
+    familyId: 'family1'
   },
   {
     id: 'member2b',
@@ -79,7 +168,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Nhẫn nại', 'Tốt bụng'],
     generation: 1,
     spouseIds: ['member1'],
-    childrenIds: ['member4']
+    childrenIds: ['member4'],
+    familyId: 'family1'
   },
   
   // Thế hệ 2 - Ông bà
@@ -97,7 +187,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     fatherId: 'member1',
     motherId: 'member2',
     spouseIds: ['member5'],
-    childrenIds: ['member7', 'member8']
+    childrenIds: ['member7', 'member8'],
+    familyId: 'family1'
   },
   {
     id: 'member4',
@@ -110,9 +201,10 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Chuyên nghiệp', 'Tâm huyết với bệnh nhân'],
     generation: 2,
     fatherId: 'member1',
-    motherId: 'member2',
+    motherId: 'member2b',
     spouseIds: ['member6'],
-    childrenIds: ['member9', 'member10']
+    childrenIds: ['member9', 'member10'],
+    familyId: 'family1'
   },
   {
     id: 'member5',
@@ -125,7 +217,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Chu đáo', 'Nhiệt tình'],
     generation: 2,
     spouseIds: ['member3'],
-    childrenIds: ['member7', 'member8']
+    childrenIds: ['member7', 'member8'],
+    familyId: 'family1'
   },
   {
     id: 'member6',
@@ -138,7 +231,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Cẩn thận', 'Tỉ mỉ'],
     generation: 2,
     spouseIds: ['member4'],
-    childrenIds: ['member9', 'member10']
+    childrenIds: ['member9', 'member10'],
+    familyId: 'family1'
   },
   
   // Thế hệ 3 - Cha mẹ
@@ -157,7 +251,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     fatherId: 'member3',
     motherId: 'member5',
     spouseIds: ['member11'],
-    childrenIds: ['member13', 'member14']
+    childrenIds: ['member13', 'member14'],
+    familyId: 'family1'
   },
   {
     id: 'member8',
@@ -174,7 +269,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     fatherId: 'member3',
     motherId: 'member5',
     spouseIds: ['member12'],
-    childrenIds: ['member15']
+    childrenIds: ['member15'],
+    familyId: 'family1'
   },
   {
     id: 'member9',
@@ -190,7 +286,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     generation: 3,
     fatherId: 'member4',
     motherId: 'member6',
-    childrenIds: ['member16']
+    childrenIds: ['member16'],
+    familyId: 'family1'
   },
   {
     id: 'member10',
@@ -206,7 +303,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     generation: 3,
     fatherId: 'member4',
     motherId: 'member6',
-    childrenIds: ['member17', 'member18']
+    childrenIds: ['member17', 'member18'],
+    familyId: 'family1'
   },
   
   // Vợ/chồng thế hệ 3
@@ -223,7 +321,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     email: 'hoang.thi.thu@example.com',
     generation: 3,
     spouseIds: ['member7'],
-    childrenIds: ['member13', 'member14']
+    childrenIds: ['member13', 'member14'],
+    familyId: 'family1'
   },
   {
     id: 'member12',
@@ -238,7 +337,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     email: 'tran.van.minh@example.com',
     generation: 3,
     spouseIds: ['member8'],
-    childrenIds: ['member15']
+    childrenIds: ['member15'],
+    familyId: 'family1'
   },
   
   // Thế hệ 4 - Con cái
@@ -253,7 +353,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Thông minh', 'Chăm chỉ', 'Thích công nghệ'],
     generation: 4,
     fatherId: 'member7',
-    motherId: 'member11'
+    motherId: 'member11',
+    familyId: 'family1'
   },
   {
     id: 'member14',
@@ -266,7 +367,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Hiền lành', 'Tài năng nghệ thuật', 'Chăm học'],
     generation: 4,
     fatherId: 'member7',
-    motherId: 'member11'
+    motherId: 'member11',
+    familyId: 'family1'
   },
   {
     id: 'member15',
@@ -279,7 +381,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Sáng tạo', 'Năng động', 'Yêu nghệ thuật'],
     generation: 4,
     fatherId: 'member12',
-    motherId: 'member8'
+    motherId: 'member8',
+    familyId: 'family1'
   },
   {
     id: 'member16',
@@ -291,7 +394,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     description: 'Học sinh lớp 5, thích thể thao',
     characteristics: ['Khỏe mạnh', 'Năng động', 'Vui vẻ'],
     generation: 4,
-    fatherId: 'member9'
+    fatherId: 'member9',
+    familyId: 'family1'
   },
   {
     id: 'member17',
@@ -303,7 +407,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     description: 'Học sinh lớp 3, học giỏi',
     characteristics: ['Thông minh', 'Chăm chỉ', 'Ngoan ngoãn'],
     generation: 4,
-    motherId: 'member10'
+    motherId: 'member10',
+    familyId: 'family1'
   },
   {
     id: 'member18',
@@ -315,7 +420,36 @@ export const mockFamilyMembers: FamilyMember[] = [
     description: 'Học sinh lớp 1, hoạt bát',
     characteristics: ['Năng động', 'Vui vẻ', 'Thích khám phá'],
     generation: 4,
-    motherId: 'member10'
+    motherId: 'member10',
+    familyId: 'family1'
+  },
+
+  // Family 2 (Trần) - Sample members
+  {
+    id: 'member_tran1',
+    fullName: 'Trần Văn Minh',
+    birthDate: '1975-03-10',
+    gender: 'male',
+    address: 'TP. Hồ Chí Minh, Việt Nam',
+    occupation: 'Kiến trúc sư',
+    description: 'Kiến trúc sư trưởng tại công ty thiết kế',
+    characteristics: ['Sáng tạo', 'Tỉ mỉ', 'Có tầm nhìn'],
+    generation: 1,
+    childrenIds: ['member_tran2'],
+    familyId: 'family2'
+  },
+  {
+    id: 'member_tran2',
+    fullName: 'Trần Thị Mai',
+    birthDate: '2000-08-15',
+    gender: 'female',
+    address: 'TP. Hồ Chí Minh, Việt Nam',
+    occupation: 'Sinh viên',
+    description: 'Sinh viên năm cuối ngành Thiết kế đồ họa',
+    characteristics: ['Năng động', 'Sáng tạo', 'Thích khám phá'],
+    generation: 2,
+    fatherId: 'member_tran1',
+    familyId: 'family2'
   }
 ];
 
@@ -325,16 +459,89 @@ export const setCurrentUser = (user: User) => {
   currentLoggedInUser = user;
 };
 
-export const getCurrentUser = (): User => {
-  return currentLoggedInUser || mockUsers[0];
+export const getCurrentUser = (): User | null => {
+  return currentLoggedInUser;
 };
 
 export const getUserById = (id: string): User | undefined => {
   return mockUsers.find(u => u.id === id);
 };
 
+export const getUserByEmail = (email: string): User | undefined => {
+  return mockUsers.find(u => u.email === email);
+};
+
+export const getFamilyById = (id: string): Family | undefined => {
+  return mockFamilies.find(f => f.id === id);
+};
+
 export const getFamilyMemberById = (id: string): FamilyMember | undefined => {
   return mockFamilyMembers.find(m => m.id === id);
+};
+
+export const getFamilyMembers = (familyId: string): FamilyMember[] => {
+  return mockFamilyMembers.filter(m => m.familyId === familyId);
+};
+
+export const getUserFamilies = (userId: string): Family[] => {
+  const user = getUserById(userId);
+  if (!user) return [];
+  
+  return user.familyMemberships
+    .map(membership => getFamilyById(membership.familyId))
+    .filter(family => family !== undefined) as Family[];
+};
+
+export const getUserRoleInFamily = (userId: string, familyId: string): string | null => {
+  const user = getUserById(userId);
+  if (!user) return null;
+  
+  const membership = user.familyMemberships.find(m => m.familyId === familyId);
+  return membership?.role || null;
+};
+
+export const createUser = (userData: Omit<User, 'id' | 'createdAt' | 'familyMemberships' | 'systemRole'>): User => {
+  const newUser: User = {
+    ...userData,
+    id: `user_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    systemRole: 'user',
+    familyMemberships: []
+  };
+  
+  mockUsers.push(newUser);
+  return newUser;
+};
+
+export const createFamily = (name: string, description: string, createdBy: string): Family => {
+  const newFamily: Family = {
+    id: `family_${Date.now()}`,
+    name,
+    description,
+    createdBy,
+    createdAt: new Date().toISOString(),
+    isPublic: false,
+    settings: {
+      allowPublicView: false,
+      allowMemberInvite: true,
+      requireApproval: true
+    }
+  };
+  
+  mockFamilies.push(newFamily);
+  
+  // Add creator as admin
+  const user = getUserById(createdBy);
+  if (user) {
+    user.familyMemberships.push({
+      familyId: newFamily.id,
+      role: 'admin',
+      joinedAt: new Date().toISOString()
+    });
+    user.currentFamilyId = newFamily.id;
+  }
+  
+  return newFamily;
 };
 
 export const addPendingChange = (change: Omit<PendingChange, 'id' | 'submittedAt' | 'status'>) => {
@@ -386,8 +593,12 @@ export const rejectPendingChange = (changeId: string, reviewerId: string, reason
   return true;
 };
 
-export const getPendingChanges = () => {
-  return pendingChanges.filter(c => c.status === 'pending');
+export const getPendingChanges = (familyId?: string) => {
+  let changes = pendingChanges.filter(c => c.status === 'pending');
+  if (familyId) {
+    changes = changes.filter(c => c.familyId === familyId);
+  }
+  return changes;
 };
 
 export const getRelationship = (fromId: string, toId: string): string => {

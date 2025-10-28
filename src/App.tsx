@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { LoginForm } from './components/LoginForm';
+import { AuthTabs } from './components/AuthTabs';
+import { FamilySelector } from './components/FamilySelector';
 import { FamilyTreeView } from './components/FamilyTreeView';
 import { ProfileCard } from './components/ProfileCard';
 import { SearchBar } from './components/SearchBar';
 import { MemberFormDialog } from './components/MemberFormDialog';
 import { PendingChangesDialog } from './components/PendingChangesDialog';
+import { FamilySettings } from './components/FamilySettings';
 import { Button } from './components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Badge } from './components/ui/badge';
 import { 
-  mockFamilyMembers, 
   setCurrentUser, 
   getCurrentUser, 
   getFamilyMemberById,
@@ -17,10 +18,12 @@ import {
   addPendingChange,
   approvePendingChange,
   rejectPendingChange,
-  getPendingChanges
+  getPendingChanges,
+  getFamilyMembers,
+  getFamilyById
 } from './data/mockData';
-import { FamilyMember, User as UserType } from './types/family';
-import { LogOut, Users, User, Home, Plus, Bell, Shield, Edit2, Eye } from 'lucide-react';
+import { FamilyMember, User as UserType, Family } from './types/family';
+import { LogOut, Users, User, Home, Plus, Bell, Shield, Edit2, Eye, Settings, ArrowLeft } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { 
   AlertDialog,
@@ -32,25 +35,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './components/ui/alert-dialog';
+import { 
+  canUserAccessFamily, 
+  canUserEditInFamily, 
+  getUserCurrentFamily,
+  switchUserFamily 
+} from './utils/familyUtils';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUserState] = useState<UserType | null>(null);
+  const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | undefined>(undefined);
   const [showPendingChanges, setShowPendingChanges] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
   const [deleteConfirmMemberId, setDeleteConfirmMemberId] = useState<string | null>(null);
   const [addChildParentId, setAddChildParentId] = useState<string | undefined>(undefined);
   const [addSpouseForId, setAddSpouseForId] = useState<string | undefined>(undefined);
 
+  // Get current family members
+  const familyMembers = currentFamily ? getFamilyMembers(currentFamily.id) : [];
+
   useEffect(() => {
-    if (isLoggedIn) {
-      setPendingChangesCount(getPendingChanges().length);
+    if (isLoggedIn && currentFamily) {
+      setPendingChangesCount(getPendingChanges(currentFamily.id).length);
     }
-  }, [isLoggedIn, showPendingChanges]);
+  }, [isLoggedIn, currentFamily, showPendingChanges]);
 
   const handleLogin = (userId: string) => {
     const user = getUserById(userId);
@@ -59,16 +73,65 @@ export default function App() {
     setIsLoggedIn(true);
     setCurrentUser(user);
     setCurrentUserState(user);
-    setSelectedMemberId(user.familyMemberId);
-    setActiveTab('profile');
+    
+    // If user has a current family, set it
+    if (user.currentFamilyId) {
+      const family = getFamilyById(user.currentFamilyId);
+      if (family && canUserAccessFamily(user.id, family.id)) {
+        setCurrentFamily(family);
+        // Find user's family member profile
+        const membership = user.familyMemberships.find(m => m.familyId === family.id);
+        if (membership?.familyMemberId) {
+          setSelectedMemberId(membership.familyMemberId);
+          setActiveTab('profile');
+        }
+      }
+    }
+    
     toast.success(`Chào mừng ${user.name}!`);
+  };
+
+  const handleRegister = (user: UserType) => {
+    setCurrentUserState(user);
+    setIsLoggedIn(true);
+    toast.success(`Chào mừng ${user.name}! Hãy tạo gia phả đầu tiên của bạn.`);
+  };
+
+  const handleSelectFamily = (familyId: string) => {
+    if (!currentUser) return;
+    
+    const family = getFamilyById(familyId);
+    if (!family) return;
+    
+    if (!canUserAccessFamily(currentUser.id, familyId)) {
+      toast.error('Bạn không có quyền truy cập gia phả này');
+      return;
+    }
+    
+    // Switch to family
+    if (switchUserFamily(currentUser, familyId)) {
+      setCurrentFamily(family);
+      
+      // Find user's family member profile
+      const membership = currentUser.familyMemberships.find(m => m.familyId === familyId);
+      if (membership?.familyMemberId) {
+        setSelectedMemberId(membership.familyMemberId);
+        setActiveTab('profile');
+      } else {
+        setActiveTab('home');
+      }
+      
+      toast.success(`Đã chuyển sang gia phả: ${family.name}`);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUserState(null);
+    setCurrentFamily(null);
     setSelectedMemberId(null);
     setActiveTab('home');
+    setShowSettings(false);
     toast.info('Đã đăng xuất');
   };
 
@@ -78,9 +141,9 @@ export default function App() {
   };
 
   const handleAddMember = () => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
-    if (currentUser.role === 'viewer') {
+    if (!canUserEditInFamily(currentUser.id, currentFamily.id)) {
       toast.error('Bạn không có quyền thêm thành viên');
       return;
     }
@@ -92,9 +155,9 @@ export default function App() {
   };
 
   const handleAddChild = (parentId: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
-    if (currentUser.role === 'viewer') {
+    if (!canUserEditInFamily(currentUser.id, currentFamily.id)) {
       toast.error('Bạn không có quyền thêm thành viên');
       return;
     }
@@ -106,9 +169,9 @@ export default function App() {
   };
 
   const handleAddSpouse = (memberId: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
-    if (currentUser.role === 'viewer') {
+    if (!canUserEditInFamily(currentUser.id, currentFamily.id)) {
       toast.error('Bạn không có quyền thêm thành viên');
       return;
     }
@@ -120,11 +183,12 @@ export default function App() {
   };
 
   const handleEditMember = (member: FamilyMember) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
-    const canEdit = currentUser.role === 'admin' || 
-                    currentUser.role === 'editor' || 
-                    (currentUser.role === 'member' && currentUser.familyMemberId === member.id);
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+    const canEdit = userRole === 'admin' || 
+                    userRole === 'editor' || 
+                    (userRole === 'member' && currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.familyMemberId === member.id);
 
     if (!canEdit) {
       toast.error('Bạn không có quyền chỉnh sửa thành viên này');
@@ -138,9 +202,10 @@ export default function App() {
   };
 
   const handleDeleteMember = (memberId: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
-    if (currentUser.role !== 'admin' && currentUser.role !== 'editor') {
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+    if (userRole !== 'admin' && userRole !== 'editor') {
       toast.error('Bạn không có quyền xóa thành viên');
       return;
     }
@@ -149,19 +214,24 @@ export default function App() {
   };
 
   const confirmDelete = () => {
-    if (!currentUser || !deleteConfirmMemberId) return;
+    if (!currentUser || !currentFamily || !deleteConfirmMemberId) return;
 
     const member = getFamilyMemberById(deleteConfirmMemberId);
     if (!member) return;
 
-    if (currentUser.role === 'admin') {
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+
+    if (userRole === 'admin') {
       // Admin can delete directly
-      const index = mockFamilyMembers.findIndex(m => m.id === deleteConfirmMemberId);
+      const index = familyMembers.findIndex(m => m.id === deleteConfirmMemberId);
       if (index !== -1) {
-        mockFamilyMembers.splice(index, 1);
+        familyMembers.splice(index, 1);
         toast.success('Đã xóa thành viên');
         if (selectedMemberId === deleteConfirmMemberId) {
-          setSelectedMemberId(currentUser.familyMemberId);
+          const userMembership = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id);
+          if (userMembership?.familyMemberId) {
+            setSelectedMemberId(userMembership.familyMemberId);
+          }
         }
       }
     } else {
@@ -170,97 +240,103 @@ export default function App() {
         type: 'delete',
         submittedBy: currentUser.id,
         data: member,
-        originalData: member
+        originalData: member,
+        familyId: currentFamily.id
       });
       toast.success('Yêu cầu xóa đã được gửi, chờ admin phê duyệt');
-      setPendingChangesCount(getPendingChanges().length);
+      setPendingChangesCount(getPendingChanges(currentFamily.id).length);
     }
 
     setDeleteConfirmMemberId(null);
   };
 
   const handleSubmitMember = (data: Partial<FamilyMember>) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentFamily) return;
 
     const isEditing = !!editingMember;
     const changeType = isEditing ? 'edit' : 'add';
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
 
-    // Xử lý quan hệ cha mẹ - con
+    // Add familyId to data
+    const memberData = { ...data, familyId: currentFamily.id };
+
+    // Handle parent-child relationships
     if (!isEditing) {
-      // Thêm con vào danh sách con của cha
-      if (data.fatherId) {
-        const father = getFamilyMemberById(data.fatherId);
+      // Add child to father's children list
+      if (memberData.fatherId) {
+        const father = getFamilyMemberById(memberData.fatherId);
         if (father) {
           const updatedFather = {
             ...father,
-            childrenIds: [...(father.childrenIds || []), data.id!]
+            childrenIds: [...(father.childrenIds || []), memberData.id!]
           };
-          const fatherIndex = mockFamilyMembers.findIndex(m => m.id === data.fatherId);
+          const fatherIndex = familyMembers.findIndex(m => m.id === memberData.fatherId);
           if (fatherIndex !== -1) {
-            mockFamilyMembers[fatherIndex] = updatedFather;
+            familyMembers[fatherIndex] = updatedFather;
           }
         }
       }
 
-      // Thêm con vào danh sách con của mẹ
-      if (data.motherId) {
-        const mother = getFamilyMemberById(data.motherId);
+      // Add child to mother's children list
+      if (memberData.motherId) {
+        const mother = getFamilyMemberById(memberData.motherId);
         if (mother) {
           const updatedMother = {
             ...mother,
-            childrenIds: [...(mother.childrenIds || []), data.id!]
+            childrenIds: [...(mother.childrenIds || []), memberData.id!]
           };
-          const motherIndex = mockFamilyMembers.findIndex(m => m.id === data.motherId);
+          const motherIndex = familyMembers.findIndex(m => m.id === memberData.motherId);
           if (motherIndex !== -1) {
-            mockFamilyMembers[motherIndex] = updatedMother;
+            familyMembers[motherIndex] = updatedMother;
           }
         }
       }
 
-      // Xử lý quan hệ vợ chồng
-      if (data.spouseIds && data.spouseIds.length > 0) {
-        data.spouseIds.forEach(spouseId => {
+      // Handle spouse relationships
+      if (memberData.spouseIds && memberData.spouseIds.length > 0) {
+        memberData.spouseIds.forEach(spouseId => {
           const spouse = getFamilyMemberById(spouseId);
           if (spouse) {
             const updatedSpouse = {
               ...spouse,
-              spouseIds: [...(spouse.spouseIds || []), data.id!]
+              spouseIds: [...(spouse.spouseIds || []), memberData.id!]
             };
-            const spouseIndex = mockFamilyMembers.findIndex(m => m.id === spouseId);
+            const spouseIndex = familyMembers.findIndex(m => m.id === spouseId);
             if (spouseIndex !== -1) {
-              mockFamilyMembers[spouseIndex] = updatedSpouse;
+              familyMembers[spouseIndex] = updatedSpouse;
             }
           }
         });
       }
     }
 
-    if (currentUser.role === 'admin') {
+    if (userRole === 'admin') {
       // Admin can make changes directly
-      if (isEditing && data.id) {
-        const index = mockFamilyMembers.findIndex(m => m.id === data.id);
+      if (isEditing && memberData.id) {
+        const index = familyMembers.findIndex(m => m.id === memberData.id);
         if (index !== -1) {
-          mockFamilyMembers[index] = { ...mockFamilyMembers[index], ...data };
+          familyMembers[index] = { ...familyMembers[index], ...memberData };
           toast.success('Đã cập nhật thông tin thành viên');
         }
       } else {
-        mockFamilyMembers.push(data as FamilyMember);
+        familyMembers.push(memberData as FamilyMember);
         toast.success('Đã thêm thành viên mới');
       }
       // Reset states
       setAddChildParentId(undefined);
       setAddSpouseForId(undefined);
-    } else if (currentUser.role === 'editor' || 
-               (currentUser.role === 'member' && currentUser.familyMemberId === data.id)) {
+    } else if (userRole === 'editor' || 
+               (userRole === 'member' && currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.familyMemberId === memberData.id)) {
       // Editor or Member editing their own profile - needs approval
       addPendingChange({
         type: changeType,
         submittedBy: currentUser.id,
-        data,
-        originalData: isEditing ? editingMember : undefined
+        data: memberData,
+        originalData: isEditing ? editingMember : undefined,
+        familyId: currentFamily.id
       });
       toast.success('Yêu cầu đã được gửi, chờ admin phê duyệt');
-      setPendingChangesCount(getPendingChanges().length);
+      setPendingChangesCount(getPendingChanges(currentFamily.id).length);
       // Reset states
       setAddChildParentId(undefined);
       setAddSpouseForId(undefined);
@@ -268,7 +344,10 @@ export default function App() {
   };
 
   const handleApproveChange = (changeId: string) => {
-    if (currentUser?.role !== 'admin') {
+    if (!currentUser || !currentFamily) return;
+    
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+    if (userRole !== 'admin') {
       toast.error('Chỉ admin mới có thể phê duyệt');
       return;
     }
@@ -276,14 +355,17 @@ export default function App() {
     const success = approvePendingChange(changeId, currentUser.id);
     if (success) {
       toast.success('Đã phê duyệt thay đổi');
-      setPendingChangesCount(getPendingChanges().length);
+      setPendingChangesCount(getPendingChanges(currentFamily.id).length);
     } else {
       toast.error('Không thể phê duyệt');
     }
   };
 
   const handleRejectChange = (changeId: string, reason: string) => {
-    if (currentUser?.role !== 'admin') {
+    if (!currentUser || !currentFamily) return;
+    
+    const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+    if (userRole !== 'admin') {
       toast.error('Chỉ admin mới có thể từ chối');
       return;
     }
@@ -291,7 +373,7 @@ export default function App() {
     const success = rejectPendingChange(changeId, currentUser.id, reason);
     if (success) {
       toast.success('Đã từ chối thay đổi');
-      setPendingChangesCount(getPendingChanges().length);
+      setPendingChangesCount(getPendingChanges(currentFamily.id).length);
     } else {
       toast.error('Không thể từ chối');
     }
@@ -313,13 +395,37 @@ export default function App() {
   };
 
   const selectedMember = selectedMemberId ? getFamilyMemberById(selectedMemberId) : null;
-  const currentMember = currentUser ? getFamilyMemberById(currentUser.familyMemberId) : null;
+  const currentMember = currentUser && currentFamily ? 
+    (() => {
+      const membership = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id);
+      return membership?.familyMemberId ? getFamilyMemberById(membership.familyMemberId) : null;
+    })() : null;
 
+  // Show auth if not logged in
   if (!isLoggedIn || !currentUser) {
-    return <LoginForm onLogin={handleLogin} />;
+    return <AuthTabs onLogin={handleLogin} onRegister={handleRegister} />;
   }
 
-  const canAddEdit = currentUser.role === 'admin' || currentUser.role === 'editor';
+  // Show family selector if no current family
+  if (!currentFamily) {
+    return <FamilySelector user={currentUser} onSelectFamily={handleSelectFamily} />;
+  }
+
+  // Show settings if requested
+  if (showSettings) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <FamilySettings 
+          family={currentFamily} 
+          currentUser={currentUser} 
+          onClose={() => setShowSettings(false)} 
+        />
+      </div>
+    );
+  }
+
+  const userRole = currentUser.familyMemberships.find(m => m.familyId === currentFamily.id)?.role;
+  const canAddEdit = canUserEditInFamily(currentUser.id, currentFamily.id);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -332,21 +438,40 @@ export default function App() {
             <div className="flex items-center gap-3">
               <Users className="h-8 w-8 text-blue-600" />
               <div>
-                <h1 className="text-blue-900">Gia Phả Việt</h1>
+                <h1 className="text-blue-900">{currentFamily.name}</h1>
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-gray-600">
-                    Xin chào, {currentMember?.fullName}
+                    Xin chào, {currentMember?.fullName || currentUser.name}
                   </p>
-                  {getRoleBadge(currentUser.role)}
+                  {userRole && getRoleBadge(userRole)}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {currentUser.role === 'admin' && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentFamily(null)}
+                size="sm"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Chọn gia phả khác
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSettings(true)}
+                size="sm"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Cài đặt
+              </Button>
+              
+              {userRole === 'admin' && (
                 <Button 
                   variant="outline" 
                   onClick={() => setShowPendingChanges(true)}
                   className="relative"
+                  size="sm"
                 >
                   <Bell className="h-4 w-4 mr-2" />
                   Chờ duyệt
@@ -357,7 +482,8 @@ export default function App() {
                   )}
                 </Button>
               )}
-              <Button variant="outline" onClick={handleLogout}>
+              
+              <Button variant="outline" onClick={handleLogout} size="sm">
                 <LogOut className="h-4 w-4 mr-2" />
                 Đăng xuất
               </Button>
@@ -389,9 +515,9 @@ export default function App() {
 
             <div className="flex items-center gap-4 w-full md:w-auto">
               <SearchBar
-                members={mockFamilyMembers}
+                members={familyMembers}
                 onSelectMember={handleSelectMember}
-                currentUserId={currentUser.familyMemberId}
+                currentUserId={currentMember?.id}
               />
               {canAddEdit && (
                 <Button onClick={handleAddMember} className="gap-2 whitespace-nowrap">
@@ -404,31 +530,32 @@ export default function App() {
 
           <TabsContent value="home" className="space-y-6">
             <div className="bg-white rounded-lg p-8 shadow-sm">
-              <h2 className="mb-4">Chào mừng đến với Gia Phả Việt</h2>
+              <h2 className="mb-4">Chào mừng đến với {currentFamily.name}</h2>
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="mb-2">
-                  <strong>Quyền của bạn ({currentUser.role}):</strong>
+                  <strong>Quyền của bạn ({userRole}):</strong>
                 </p>
                 <ul className="text-sm text-gray-700 space-y-1">
-                  {currentUser.role === 'admin' && (
+                  {userRole === 'admin' && (
                     <>
                       <li>✓ Xem, thêm, sửa, xóa tất cả thành viên</li>
                       <li>✓ Phê duyệt yêu cầu thay đổi từ Editor và Member</li>
+                      <li>✓ Quản lý cài đặt gia phả</li>
                     </>
                   )}
-                  {currentUser.role === 'editor' && (
+                  {userRole === 'editor' && (
                     <>
                       <li>✓ Xem tất cả thành viên</li>
                       <li>✓ Thêm, sửa, xóa thành viên (cần admin duyệt)</li>
                     </>
                   )}
-                  {currentUser.role === 'member' && (
+                  {userRole === 'member' && (
                     <>
                       <li>✓ Xem tất cả thành viên</li>
                       <li>✓ Chỉnh sửa thông tin cá nhân (cần admin duyệt)</li>
                     </>
                   )}
-                  {currentUser.role === 'viewer' && (
+                  {userRole === 'viewer' && (
                     <li>✓ Chỉ xem thông tin gia phả</li>
                   )}
                 </ul>
@@ -440,7 +567,7 @@ export default function App() {
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <h3 className="mb-2">Tổng số thành viên</h3>
-                  <p className="text-blue-600">{mockFamilyMembers.length} người</p>
+                  <p className="text-blue-600">{familyMembers.length} người</p>
                 </div>
 
                 <div className="bg-green-50 rounded-lg p-6">
@@ -448,7 +575,7 @@ export default function App() {
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <h3 className="mb-2">Số thế hệ</h3>
-                  <p className="text-green-600">4 thế hệ</p>
+                  <p className="text-green-600">{new Set(familyMembers.map(m => m.generation)).size} thế hệ</p>
                 </div>
 
                 <div className="bg-purple-50 rounded-lg p-6">
@@ -456,7 +583,7 @@ export default function App() {
                     <User className="h-6 w-6 text-white" />
                   </div>
                   <h3 className="mb-2">Vị trí của bạn</h3>
-                  <p className="text-purple-600">Thế hệ {currentMember?.generation}</p>
+                  <p className="text-purple-600">Thế hệ {currentMember?.generation || 'N/A'}</p>
                 </div>
               </div>
 
@@ -467,8 +594,11 @@ export default function App() {
                   <li>• Xem cây gia phả để hiểu rõ cấu trúc gia đình</li>
                   <li>• Nhấp vào bất kỳ thành viên nào để xem hồ sơ chi tiết</li>
                   {canAddEdit && <li>• Bấm nút "Thêm" để thêm thành viên mới vào gia phả</li>}
-                  {currentUser.role === 'admin' && (
-                    <li>• Kiểm tra thông báo để duyệt yêu cầu từ Editor và Member</li>
+                  {userRole === 'admin' && (
+                    <>
+                      <li>• Kiểm tra thông báo để duyệt yêu cầu từ Editor và Member</li>
+                      <li>• Vào "Cài đặt" để quản lý quyền riêng tư và công khai gia phả</li>
+                    </>
                   )}
                 </ul>
               </div>
@@ -485,7 +615,7 @@ export default function App() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <FamilyTreeView
-                  members={mockFamilyMembers}
+                  members={familyMembers}
                   onSelectMember={handleSelectMember}
                   selectedMemberId={selectedMemberId || undefined}
                   onAddChild={handleAddChild}
@@ -500,7 +630,7 @@ export default function App() {
             <TabsContent value="profile" className="flex justify-center">
               <ProfileCard 
                 member={selectedMember} 
-                currentUserId={currentUser.familyMemberId}
+                currentUserId={currentMember?.id}
                 currentUser={currentUser}
                 onEdit={handleEditMember}
                 onDelete={handleDeleteMember}
@@ -524,11 +654,11 @@ export default function App() {
         relationType={addChildParentId ? 'child' : addSpouseForId ? 'spouse' : undefined}
       />
 
-      {currentUser.role === 'admin' && (
+      {userRole === 'admin' && (
         <PendingChangesDialog
           open={showPendingChanges}
           onOpenChange={setShowPendingChanges}
-          changes={getPendingChanges()}
+          changes={getPendingChanges(currentFamily.id)}
           onApprove={handleApproveChange}
           onReject={handleRejectChange}
         />
@@ -539,7 +669,7 @@ export default function App() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa thành viên</AlertDialogTitle>
             <AlertDialogDescription>
-              {currentUser.role === 'admin' 
+              {userRole === 'admin' 
                 ? 'Bạn có chắc chắn muốn xóa thành viên này? Hành động này không thể hoàn tác.'
                 : 'Yêu cầu xóa sẽ được gửi đến admin để phê duyệt.'
               }
@@ -548,7 +678,7 @@ export default function App() {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>
-              {currentUser.role === 'admin' ? 'Xóa' : 'Gửi yêu cầu'}
+              {userRole === 'admin' ? 'Xóa' : 'Gửi yêu cầu'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
