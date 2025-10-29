@@ -4,6 +4,7 @@ import { getFamilyMemberById } from '../data/mockData';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Button } from './ui/button';
 import { ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
 
 interface FamilyTreeViewProps {
   members: FamilyMember[];
@@ -114,14 +115,150 @@ export function FamilyTreeView({
     return childrenNodes;
   };
 
+  // Component con để đo vị trí và vẽ line động
+  const ChildrenContainer = ({
+    node,
+    level,
+    renderTreeNode,
+  }: {
+    node: TreeNode;
+    level: number;
+    renderTreeNode: (node: TreeNode, level: number) => JSX.Element;
+  }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [linePositions, setLinePositions] = useState<{
+      parentX: number;
+      startX: number;
+      endX: number;
+      childXs: number[];
+    } | null>(null);
+  
+    useEffect(() => {
+      const updatePositions = () => {
+        const container = containerRef.current;
+        if (!container) return;
+  
+        // LẤY CHỈ CÁC PHẦN TỬ CON TRỰC TIẾP (direct children)
+        const directChildren = Array.from(container.children) as HTMLElement[];
+  
+        // Nếu số phần tử trực tiếp không khớp số node.children thì bỏ qua (chờ render xong)
+        if (directChildren.length === 0 || directChildren.length !== node.children.length) return;
+  
+        // Tính tâm (center X) cho mỗi phần tử con — sử dụng offsetLeft / offsetWidth
+        const childXs = directChildren.map((el) => el.offsetLeft + el.offsetWidth / 2);
+  
+        const startX = Math.min(...childXs);
+        const endX = Math.max(...childXs);
+  
+        // parentX là tâm của container (vì parent được đặt ở giữa container)
+        const parentX = container.offsetWidth / 2;
+  
+        setLinePositions({ parentX, startX, endX, childXs });
+      };
+  
+      // ResizeObserver để cập nhật khi layout thay đổi
+      const ro = new ResizeObserver(() => {
+        // throttle bằng requestAnimationFrame
+        requestAnimationFrame(updatePositions);
+      });
+  
+      if (containerRef.current) ro.observe(containerRef.current);
+  
+      // Chạy lần đầu sau render (đặt 0 hoặc 50ms nếu cần)
+      const timeout = setTimeout(() => {
+        requestAnimationFrame(updatePositions);
+      }, 20);
+  
+      return () => {
+        clearTimeout(timeout);
+        ro.disconnect();
+      };
+    }, [node.children.length]);
+  
+    const childrenCount = node.children.length;
+  
+    return (
+      <div className="relative mt-[60px] w-full">
+        <div
+          ref={containerRef}
+          className="flex justify-center items-start relative"
+        >
+          {node.children.map((childNode) => (
+            <div
+              key={childNode.member.id}
+              data-child-node
+              className="relative"
+            >
+              {renderTreeNode(childNode, level + 1)}
+            </div>
+          ))}
+        </div>
+  
+        {linePositions && childrenCount > 0 && (
+          <svg
+            className="absolute left-0 top-0 z-20 pointer-events-none"
+            style={{
+              top: "-60px",
+              width: "100%",
+              height: "60px",
+              overflow: "visible",
+            }}
+          >
+            {childrenCount === 1 ? (
+              <line
+                x1={linePositions.childXs[0]}
+                y1="0"
+                x2={linePositions.childXs[0]}
+                y2="60"
+                stroke="#000000"
+                strokeWidth="2"
+              />
+            ) : (
+              <>
+                <line
+                  x1={linePositions.parentX}
+                  y1="0"
+                  x2={linePositions.parentX}
+                  y2="40"
+                  stroke="#000000"
+                  strokeWidth="2"
+                />
+                <line
+                  x1={linePositions.startX}
+                  y1="40"
+                  x2={linePositions.endX}
+                  y2="40"
+                  stroke="#000000"
+                  strokeWidth="2"
+                />
+                {linePositions.childXs.map((x, i) => (
+                  <line
+                    key={i}
+                    x1={x}
+                    y1="40"
+                    x2={x}
+                    y2="60"
+                    stroke="#000000"
+                    strokeWidth="2"
+                  />
+                ))}
+              </>
+            )}
+          </svg>
+        )}
+      </div>
+    );
+  };
+  
+
   // Render một node và con cái của nó (từ trên xuống)
   const renderTreeNode = (node: TreeNode, level: number = 0): JSX.Element => {
     const hasChildren = node.children.length > 0;
 
     return (
-      <div key={node.member.id} className="flex flex-col items-center">
+      <div key={node.member.id} className="flex flex-col items-center relative">
         {/* Node hiện tại (nhóm gia đình) */}
-        <div className="relative">
+        <div className="relative z-30">
           <FamilyTreeNode
             member={node.member}
             spouses={node.spouses}
@@ -131,52 +268,15 @@ export function FamilyTreeView({
             onAddSpouse={onAddSpouse}
             canEdit={canEdit}
           />
-          
-          {/* Đường kẻ nối xuống con với mũi tên */}
-          {hasChildren && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-full z-10">
-              <div className="w-0.5 h-8 bg-gray-600"></div>
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                <div className="w-0 h-0 border-l-2 border-r-2 border-t-3 border-transparent border-t-gray-600"></div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Con cái */}
         {hasChildren && (
-          <div className="relative mt-8">
-            {/* Đường ngang nối các con */}
-            {node.children.length > 1 && (
-              <div 
-                className="absolute top-0 h-0.5 bg-gray-600 z-10"
-                style={{
-                  left: '50%',
-                  right: '50%',
-                  width: `${(node.children.length - 1) * 200 + 100}px`,
-                  transform: 'translateX(-50%)'
-                }}
-              />
-            )}
-            
-            {/* Render từng con */}
-            <div className="flex flex-wrap gap-4 md:gap-8 lg:gap-12 xl:gap-16 justify-center items-start">
-              {node.children.map((childNode, index) => (
-                <div key={childNode.member.id} className="relative">
-                  {/* Đường kẻ từ đường ngang xuống mỗi con với mũi tên */}
-                  {node.children.length > 1 && (
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full z-10">
-                      <div className="w-0.5 h-8 bg-gray-600"></div>
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                        <div className="w-0 h-0 border-l-2 border-r-2 border-t-3 border-transparent border-t-gray-600"></div>
-                      </div>
-                    </div>
-                  )}
-                  {renderTreeNode(childNode, level + 1)}
-                </div>
-              ))}
-            </div>
-          </div>
+          <ChildrenContainer 
+            node={node} 
+            level={level + 1}
+            renderTreeNode={renderTreeNode}
+          />
         )}
       </div>
     );
@@ -252,7 +352,7 @@ export function FamilyTreeView({
               wrapperClass="w-full h-full"
               contentClass="min-w-max min-h-max"
             >
-              <div className="p-4 md:p-8 lg:p-16 xl:p-32 min-w-max min-h-max relative">
+              <div className="p-[120px] min-w-max min-h-max relative">
                 {rootNode ? (
                   <div className="flex justify-center items-start">
                     {renderTreeNode(rootNode)}

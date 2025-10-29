@@ -433,59 +433,62 @@ export default function App() {
       
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-600" />
+        <div className="max-w-7xl mx-auto px-3 md:px-4 py-3 md:py-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Users className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
               <div>
-                <h1 className="text-blue-900">{currentFamily.name}</h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">
+                <h1 className="text-base md:text-lg lg:text-xl text-blue-900">{currentFamily.name}</h1>
+                <div className="flex flex-wrap items-center gap-1 md:gap-2">
+                  <p className="text-xs md:text-sm text-gray-600">
                     Xin chào, {currentMember?.fullName || currentUser.name}
                   </p>
                   {userRole && getRoleBadge(userRole)}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full md:w-auto">
               <Button 
                 variant="outline" 
                 onClick={() => setCurrentFamily(null)}
                 size="sm"
+                className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Chọn gia phả khác
+                <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Chọn gia phả khác</span>
+                <span className="sm:hidden">Gia phả</span>
               </Button>
               
               <Button 
                 variant="outline" 
                 onClick={() => setShowSettings(true)}
                 size="sm"
+                className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Cài đặt
+                <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Cài đặt</span>
               </Button>
               
               {userRole === 'admin' && (
                 <Button 
                   variant="outline" 
                   onClick={() => setShowPendingChanges(true)}
-                  className="relative"
+                  className="relative text-xs md:text-sm h-8 md:h-9 px-2 md:px-3"
                   size="sm"
                 >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Chờ duyệt
+                  <Bell className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Chờ duyệt</span>
                   {pendingChangesCount > 0 && (
-                    <Badge className="ml-2 bg-red-500">
+                    <Badge className="ml-1 md:ml-2 bg-red-500 text-xs">
                       {pendingChangesCount}
                     </Badge>
                   )}
                 </Button>
               )}
               
-              <Button variant="outline" onClick={handleLogout} size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Đăng xuất
+              <Button variant="outline" onClick={handleLogout} size="sm" className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Đăng xuất</span>
               </Button>
             </div>
           </div>

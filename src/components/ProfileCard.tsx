@@ -4,8 +4,10 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { Button } from './ui/button';
-import { Calendar, MapPin, Briefcase, Mail, Phone, Heart, User, Users, Edit, Trash, UserPlus, Heart as HeartIcon } from 'lucide-react';
+import { Calendar, MapPin, Briefcase, Mail, Phone, Heart, User, Users, Edit, Trash, UserPlus, Heart as HeartIcon, Eye, EyeOff } from 'lucide-react';
+import { RelationshipViewer } from './RelationshipViewer';
 import { getFamilyMemberById, getRelationship } from '../data/mockData';
+import { useState } from 'react';
 
 interface ProfileCardProps {
   member: FamilyMember;
@@ -50,72 +52,91 @@ export function ProfileCard({ member, currentUserId, currentUser, onEdit, onDele
                   (currentUser.role === 'member' && currentUser.familyMemberId === member.id);
   
   const canDelete = currentUser.role === 'admin' || currentUser.role === 'editor';
+  const isFemale = member.gender === 'female';
+  const hideKey = `hideAddActions:${member.id}`;
+  const [hideGlobalActions, setHideGlobalActions] = useState<boolean>(
+    typeof window !== 'undefined' && localStorage.getItem(hideKey) === 'true'
+  );
+
+  const toggleHideActions = () => {
+    const next = !hideGlobalActions;
+    setHideGlobalActions(next);
+    localStorage.setItem(hideKey, next ? 'true' : 'false');
+    // Thông báo cho node tương ứng cập nhật
+    window.dispatchEvent(new CustomEvent('family-tree:toggle-actions', { detail: { memberId: member.id } }));
+  };
 
   return (
-    <Card className="w-full max-w-4xl">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex items-start gap-6 justify-between">
-          <div className="flex items-start gap-6 flex-1">
-          <Avatar className="h-24 w-24">
-            <AvatarImage src={member.avatar} alt={member.fullName} />
-            <AvatarFallback>{getInitials(member.fullName)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <CardTitle>{member.fullName}</CardTitle>
-              <Badge variant={member.deathDate ? 'secondary' : 'default'}>
-                {relationship}
-              </Badge>
-              <Badge variant="outline">
-                Thế hệ {member.generation}
-              </Badge>
-            </div>
-            {member.deathDate && (
-              <Badge variant="secondary" className="mb-2">
-                Đã mất
-              </Badge>
-            )}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                <span>{member.gender === 'male' ? 'Nam' : member.gender === 'female' ? 'Nữ' : 'Khác'}</span>
+        <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 justify-between">
+          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6 flex-1 w-full">
+            <Avatar className="h-20 w-20 md:h-24 md:w-24 flex-shrink-0">
+              <AvatarImage src={member.avatar} alt={member.fullName} />
+              <AvatarFallback>{getInitials(member.fullName)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 w-full">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
+                <CardTitle className="text-lg md:text-xl lg:text-2xl">{member.fullName}</CardTitle>
+                <Badge variant={member.deathDate ? 'secondary' : 'default'} className="text-xs">
+                  {relationship}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  Thế hệ {member.generation}
+                </Badge>
               </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>{calculateAge(member.birthDate, member.deathDate)} tuổi</span>
+              {member.deathDate && (
+                <Badge variant="secondary" className="mb-2 text-xs">
+                  Đã mất
+                </Badge>
+              )}
+              <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <User className="h-3 w-3 md:h-4 md:w-4" />
+                  <span>{member.gender === 'male' ? 'Nam' : member.gender === 'female' ? 'Nữ' : 'Khác'}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                  <span>{calculateAge(member.birthDate, member.deathDate)} tuổi</span>
+                </div>
               </div>
             </div>
-          </div>
           </div>
           {(canEdit || canDelete || (currentUser.role !== 'viewer')) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
               {canEdit && onEdit && (
-                <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Sửa
+                <Button size="sm" variant="outline" onClick={() => onEdit(member)} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                  <Edit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">Sửa</span>
                 </Button>
               )}
               {canDelete && onDelete && (
-                <Button size="sm" variant="destructive" onClick={() => onDelete(member.id)}>
-                  <Trash className="h-4 w-4 mr-1" />
-                  Xóa
+                <Button size="sm" variant="destructive" onClick={() => onDelete(member.id)} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                  <Trash className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">Xóa</span>
                 </Button>
               )}
-              {currentUser.role !== 'viewer' && onAddChild && (
-                <Button size="sm" variant="outline" onClick={() => onAddChild(member.id)}>
-                  <UserPlus className="h-4 w-4 mr-1" />
-                  Thêm con
+              {currentUser.role !== 'viewer' && onAddChild && !isFemale && !hideGlobalActions && (
+                <Button size="sm" variant="outline" onClick={() => onAddChild(member.id)} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                  <UserPlus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">Thêm con</span>
                 </Button>
               )}
-              {currentUser.role !== 'viewer' && onAddSpouse && (
-                <Button size="sm" variant="outline" onClick={() => onAddSpouse(member.id)}>
-                  <HeartIcon className="h-4 w-4 mr-1" />
-                  Thêm vợ/chồng
+              {currentUser.role !== 'viewer' && onAddSpouse && !isFemale && !hideGlobalActions && (
+                <Button size="sm" variant="outline" onClick={() => onAddSpouse(member.id)} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                  <HeartIcon className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">Thêm vợ/chồng</span>
                   {member.spouseIds && member.spouseIds.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 text-xs">
                       +{member.spouseIds.length}
                     </Badge>
                   )}
+                </Button>
+              )}
+              {member.gender === 'male' && member.deathDate && (
+                <Button size="sm" variant="outline" onClick={toggleHideActions} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
+                  {hideGlobalActions ? <Eye className="h-3 w-3 md:h-4 md:w-4 mr-1" /> : <EyeOff className="h-3 w-3 md:h-4 md:w-4 mr-1" />}
+                  <span className="hidden sm:inline">{hideGlobalActions ? 'Hiện nút thêm' : 'Ẩn nút thêm'}</span>
                 </Button>
               )}
             </div>
@@ -123,6 +144,8 @@ export function ProfileCard({ member, currentUserId, currentUser, onEdit, onDele
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <RelationshipViewer currentUserMemberId={currentUserId} targetMemberId={member.id} />
+
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
