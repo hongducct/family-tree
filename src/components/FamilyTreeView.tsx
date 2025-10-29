@@ -3,7 +3,7 @@ import { FamilyTreeNode } from './FamilyTreeNode';
 import { getFamilyMemberById } from '../data/mockData';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Button } from './ui/button';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 
 interface FamilyTreeViewProps {
   members: FamilyMember[];
@@ -32,38 +32,37 @@ export function FamilyTreeView({
   // Tìm các cặp vợ chồng đã được xử lý để tránh lặp
   const processedSpouses = new Set<string>();
 
-  // Tìm root nodes (những người không có cha mẹ)
-  const findRootNodes = (): TreeNode[] => {
-    const roots: TreeNode[] = [];
+  // Tìm root node duy nhất (người có generation thấp nhất)
+  const findRootNode = (): TreeNode | null => {
+    if (members.length === 0) return null;
+    
+    // Tìm người có generation thấp nhất
+    const minGeneration = Math.min(...members.map(m => m.generation));
+    const rootMember = members.find(m => m.generation === minGeneration);
+    
+    if (!rootMember) return null;
+    
     const processedMembers = new Set<string>();
-
-    members.forEach(member => {
-      // Chỉ xử lý nếu không có cha mẹ và chưa được xử lý
-      if (!member.fatherId && !member.motherId && !processedMembers.has(member.id)) {
-        processedMembers.add(member.id);
-        
-        // Tìm tất cả vợ/chồng
-        const spouses: FamilyMember[] = [];
-        if (member.spouseIds && member.spouseIds.length > 0) {
-          member.spouseIds.forEach(spouseId => {
-            const spouseMember = getFamilyMemberById(spouseId);
-            if (spouseMember && !processedMembers.has(spouseMember.id)) {
-              spouses.push(spouseMember);
-              processedMembers.add(spouseMember.id);
-              processedSpouses.add(spouseId);
-            }
-          });
+    processedMembers.add(rootMember.id);
+    
+    // Tìm tất cả vợ/chồng của root
+    const spouses: FamilyMember[] = [];
+    if (rootMember.spouseIds && rootMember.spouseIds.length > 0) {
+      rootMember.spouseIds.forEach(spouseId => {
+        const spouseMember = getFamilyMemberById(spouseId);
+        if (spouseMember && !processedMembers.has(spouseMember.id)) {
+          spouses.push(spouseMember);
+          processedMembers.add(spouseMember.id);
+          processedSpouses.add(spouseId);
         }
+      });
+    }
 
-        roots.push({
-          member,
-          spouses,
-          children: buildChildren(member, spouses)
-        });
-      }
-    });
-
-    return roots;
+    return {
+      member: rootMember,
+      spouses,
+      children: buildChildren(rootMember, spouses)
+    };
   };
 
   // Xây dựng cây con cho một nhóm gia đình
@@ -133,35 +132,45 @@ export function FamilyTreeView({
             canEdit={canEdit}
           />
           
-          {/* Đường kẻ nối xuống con */}
+          {/* Đường kẻ nối xuống con với mũi tên */}
           {hasChildren && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0.5 h-12 bg-gray-300" />
+            <div className="absolute left-1/2 -translate-x-1/2 top-full z-10">
+              <div className="w-0.5 h-8 bg-gray-600"></div>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                <div className="w-0 h-0 border-l-2 border-r-2 border-t-3 border-transparent border-t-gray-600"></div>
+              </div>
+            </div>
           )}
         </div>
 
         {/* Con cái */}
         {hasChildren && (
-          <div className="relative mt-12">
+          <div className="relative mt-8">
             {/* Đường ngang nối các con */}
             {node.children.length > 1 && (
               <div 
-                className="absolute top-0 h-0.5 bg-gray-300"
+                className="absolute top-0 h-0.5 bg-gray-600 z-10"
                 style={{
                   left: '50%',
                   right: '50%',
-                  width: `${(node.children.length - 1) * 300 + 150}px`,
+                  width: `${(node.children.length - 1) * 200 + 100}px`,
                   transform: 'translateX(-50%)'
                 }}
               />
             )}
             
             {/* Render từng con */}
-            <div className="flex gap-12 justify-center items-start">
-              {node.children.map((childNode) => (
+            <div className="flex flex-wrap gap-4 md:gap-8 lg:gap-12 xl:gap-16 justify-center items-start">
+              {node.children.map((childNode, index) => (
                 <div key={childNode.member.id} className="relative">
-                  {/* Đường kẻ từ đường ngang xuống mỗi con */}
+                  {/* Đường kẻ từ đường ngang xuống mỗi con với mũi tên */}
                   {node.children.length > 1 && (
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0.5 h-12 bg-gray-300" />
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full z-10">
+                      <div className="w-0.5 h-8 bg-gray-600"></div>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                        <div className="w-0 h-0 border-l-2 border-r-2 border-t-3 border-transparent border-t-gray-600"></div>
+                      </div>
+                    </div>
                   )}
                   {renderTreeNode(childNode, level + 1)}
                 </div>
@@ -173,20 +182,30 @@ export function FamilyTreeView({
     );
   };
 
-  const rootNodes = findRootNodes();
+  const rootNode = findRootNode();
 
   return (
     <div className="w-full h-full relative bg-gradient-to-br from-gray-50 to-blue-50">
       <TransformWrapper
-        initialScale={0.8}
-        minScale={0.2}
-        maxScale={3}
-        centerOnInit={true}
+        initialScale={0.6}
+        minScale={0.05}
+        maxScale={10}
+        centerOnInit={false}
         wheel={{ step: 0.1 }}
         doubleClick={{ disabled: false }}
-        panning={{ velocityDisabled: true }}
+        panning={{ 
+          velocityDisabled: true,
+          disabled: false,
+          limitToBounds: false
+        }}
+        initialPositionX={0}
+        initialPositionY={0}
+        limitToBounds={false}
+        centerZoomedOut={false}
+        pinch={{ disabled: false }}
+        alignmentAnimation={{ disabled: false }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, centerView }) => (
           <>
             {/* Zoom Controls */}
             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white rounded-lg shadow-lg p-2">
@@ -195,6 +214,7 @@ export function FamilyTreeView({
                 variant="outline"
                 onClick={() => zoomIn()}
                 className="h-9 w-9 p-0"
+                title="Phóng to"
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
@@ -203,6 +223,7 @@ export function FamilyTreeView({
                 variant="outline"
                 onClick={() => zoomOut()}
                 className="h-9 w-9 p-0"
+                title="Thu nhỏ"
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
@@ -211,24 +232,30 @@ export function FamilyTreeView({
                 variant="outline"
                 onClick={() => resetTransform()}
                 className="h-9 w-9 p-0"
+                title="Reset zoom"
               >
                 <Maximize className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => centerView()}
+                className="h-9 w-9 p-0"
+                title="Căn giữa"
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Tree Content */}
             <TransformComponent
               wrapperClass="w-full h-full"
-              contentClass="w-full h-full flex items-start justify-center"
+              contentClass="min-w-max min-h-max"
             >
-              <div className="min-w-max p-12 py-20">
-                {rootNodes.length > 0 ? (
-                  <div className="flex gap-24 justify-center items-start">
-                    {rootNodes.map(rootNode => (
-                      <div key={rootNode.member.id}>
-                        {renderTreeNode(rootNode)}
-                      </div>
-                    ))}
+              <div className="p-4 md:p-8 lg:p-16 xl:p-32 min-w-max min-h-max relative">
+                {rootNode ? (
+                  <div className="flex justify-center items-start">
+                    {renderTreeNode(rootNode)}
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 py-12">

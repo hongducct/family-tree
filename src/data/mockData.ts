@@ -354,6 +354,7 @@ export const mockFamilyMembers: FamilyMember[] = [
     generation: 4,
     fatherId: 'member7',
     motherId: 'member11',
+    childrenIds: ['member23', 'member24'],
     familyId: 'family1'
   },
   {
@@ -421,6 +422,102 @@ export const mockFamilyMembers: FamilyMember[] = [
     characteristics: ['Năng động', 'Vui vẻ', 'Thích khám phá'],
     generation: 4,
     motherId: 'member10',
+    childrenIds: ['member19', 'member20'],
+    familyId: 'family1'
+  },
+
+  // Thế hệ 5 - Cháu nội
+  {
+    id: 'member19',
+    fullName: 'Nguyễn Minh Tuấn',
+    birthDate: '2025-06-10',
+    gender: 'male',
+    address: 'Đà Nẵng, Việt Nam',
+    occupation: 'Trẻ em',
+    description: 'Cháu nội đầu tiên của gia đình',
+    characteristics: ['Khỏe mạnh', 'Vui vẻ', 'Thông minh'],
+    generation: 5,
+    fatherId: 'member18',
+    familyId: 'family1'
+  },
+  {
+    id: 'member20',
+    fullName: 'Nguyễn Thị Mai',
+    birthDate: '2027-03-15',
+    gender: 'female',
+    address: 'Đà Nẵng, Việt Nam',
+    occupation: 'Trẻ em',
+    description: 'Cháu nội thứ hai của gia đình',
+    characteristics: ['Hiền lành', 'Dễ thương', 'Ngoan ngoãn'],
+    generation: 5,
+    fatherId: 'member18',
+    childrenIds: ['member21'],
+    familyId: 'family1'
+  },
+  {
+    id: 'member21',
+    fullName: 'Nguyễn Văn Thành',
+    birthDate: '2045-08-20',
+    gender: 'male',
+    address: 'Đà Nẵng, Việt Nam',
+    occupation: 'Sinh viên',
+    description: 'Chắt nội của gia đình, sinh viên đại học',
+    characteristics: ['Thông minh', 'Chăm chỉ', 'Có hoài bão'],
+    generation: 6,
+    motherId: 'member20',
+    familyId: 'family1'
+  },
+  {
+    id: 'member22',
+    fullName: 'Nguyễn Thị Linh',
+    birthDate: '2048-12-05',
+    gender: 'female',
+    address: 'Đà Nẵng, Việt Nam',
+    occupation: 'Học sinh',
+    description: 'Chắt nội thứ hai, học sinh giỏi',
+    characteristics: ['Học giỏi', 'Ngoan ngoãn', 'Yêu thương gia đình'],
+    generation: 6,
+    motherId: 'member20',
+    familyId: 'family1'
+  },
+  {
+    id: 'member23',
+    fullName: 'Nguyễn Văn Khang',
+    birthDate: '2030-04-18',
+    gender: 'male',
+    address: 'Hà Nội, Việt Nam',
+    occupation: 'Kỹ sư',
+    description: 'Cháu nội của Minh Đức, kỹ sư phần mềm',
+    characteristics: ['Thông minh', 'Sáng tạo', 'Có tầm nhìn'],
+    generation: 5,
+    fatherId: 'member13',
+    childrenIds: ['member25'],
+    familyId: 'family1'
+  },
+  {
+    id: 'member24',
+    fullName: 'Nguyễn Thị Hoa',
+    birthDate: '2032-09-25',
+    gender: 'female',
+    address: 'Hà Nội, Việt Nam',
+    occupation: 'Bác sĩ',
+    description: 'Cháu nội của Minh Đức, bác sĩ tim mạch',
+    characteristics: ['Tận tâm', 'Chuyên nghiệp', 'Yêu thương bệnh nhân'],
+    generation: 5,
+    fatherId: 'member13',
+    familyId: 'family1'
+  },
+  {
+    id: 'member25',
+    fullName: 'Nguyễn Minh Tâm',
+    birthDate: '2055-07-12',
+    gender: 'male',
+    address: 'Hà Nội, Việt Nam',
+    occupation: 'Nhà khoa học',
+    description: 'Chắt nội của Minh Đức, nhà khoa học nghiên cứu AI',
+    characteristics: ['Thiên tài', 'Kiên trì', 'Có hoài bão lớn'],
+    generation: 6,
+    fatherId: 'member23',
     familyId: 'family1'
   },
 
