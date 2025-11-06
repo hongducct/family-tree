@@ -198,7 +198,8 @@ export function FamilyTreeView({
           <svg
             className="absolute left-0 top-0 z-20 pointer-events-none"
             style={{
-              top: "-60px",
+              top: "-45px",
+              left: "0px",
               width: "100%",
               height: "60px",
               overflow: "visible",
@@ -219,15 +220,15 @@ export function FamilyTreeView({
                   x1={linePositions.parentX}
                   y1="0"
                   x2={linePositions.parentX}
-                  y2="40"
+                  y2="30"
                   stroke="#000000"
                   strokeWidth="2"
                 />
                 <line
                   x1={linePositions.startX}
-                  y1="40"
+                  y1="30"
                   x2={linePositions.endX}
-                  y2="40"
+                  y2="30"
                   stroke="#000000"
                   strokeWidth="2"
                 />
@@ -235,7 +236,7 @@ export function FamilyTreeView({
                   <line
                     key={i}
                     x1={x}
-                    y1="40"
+                    y1="30"
                     x2={x}
                     y2="60"
                     stroke="#000000"

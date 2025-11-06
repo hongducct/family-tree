@@ -37,6 +37,8 @@ export function FamilyTreeNode({
       className={`flex flex-col items-center cursor-pointer transition-all hover:scale-105 ${
         selectedMemberId === person.id ? 'ring-2 ring-blue-500 rounded-lg' : ''
       }`}
+      data-member-id={person.id}
+      data-gender={person.gender}
     >
       <div className={`bg-white rounded-lg p-3 shadow-md border-2 ${
         person.gender === 'male' ? 'border-blue-300' : 'border-pink-300'
@@ -128,7 +130,7 @@ export function FamilyTreeNode({
       </div>
 
       {/* Các nút thao tác */}
-      {canEdit && !isFemale && !hideSelfActions && (
+      {canEdit && !isFemale && !hideSelfActions ? (
         <div className="flex flex-wrap gap-2 justify-center">
           {onAddChild && (
             <Button
@@ -159,6 +161,9 @@ export function FamilyTreeNode({
             </Button>
           )}
         </div>
+      ) : (
+        // Giữ khoảng cách dọc khi ẩn nút (viewer hoặc đã tắt)
+        <div style={{ height: '28px' }} />
       )}
     </div>
   );
